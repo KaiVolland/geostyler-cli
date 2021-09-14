@@ -58,7 +58,7 @@
     "gradient-string": "^1.2.0",
     "minimist": "^1.2.5",
     "ol": "^6.7.0",
-    "ora": "5.4.1",
+    "ora": "6.0.1",
     "terminal-image": "^2.0.0"
   }
 }
