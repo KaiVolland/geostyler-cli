@@ -1,10 +1,11 @@
-#!/usr/bin/env node
-
 import SLDParser from 'geostyler-sld-parser';
 import QGISParser from 'geostyler-qgis-parser';
-// import OpenLayersParser from "geostyler-openlayers-parser";
+import OpenLayersParser from 'geostyler-openlayers-parser';
 import MapfileParser from 'geostyler-mapfile-parser';
 import MapboxParser from 'geostyler-mapbox-parser';
+import ArcGISParser from 'geostyler-lyrx-parser';
+import { StyleParser } from 'geostyler-style';
+
 import {
   existsSync,
   lstatSync,
@@ -13,7 +14,6 @@ import {
   readdirSync
 } from 'fs';
 import minimist from 'minimist';
-import { StyleParser } from 'geostyler-style';
 import ora, { Ora } from 'ora';
 import {
   logHelp,
@@ -33,10 +33,10 @@ const getParserFromFormat = (inputString: string): StyleParser | undefined => {
     throw new Error('No input');
   }
   switch (inputString.toLowerCase()) {
-    // case 'openlayers':
-    // case 'ol':
-    //   return new OpenLayersParser();
+    case 'lyrx':
+      return new ArcGISParser();
     case 'mapbox':
+    case 'maplibre':
       return new MapboxParser();
     case 'mapfile':
     case 'map':
@@ -62,9 +62,12 @@ const getParserFromFilename = (fileName: string): StyleParser | undefined => {
     return undefined;
   }
   switch (fileEnding.toLowerCase()) {
-    // case 'ol':
-    //   return new OpenLayersParser();
+    case 'ol':
+      return new OpenLayersParser();
+    case 'lyrx':
+      return new ArcGISParser();
     case 'mapbox':
+    case 'maplibre':
       return new MapboxParser();
     case 'map':
       return new MapfileParser();
@@ -158,12 +161,20 @@ function collectPaths(basePath: string, isFile: boolean): string[] {
 }
 
 async function writeFile(
-  sourceFile: string, sourceParser: StyleParser,
-  targetFile: string, targetParser: StyleParser | undefined,
+  sourceFile: string, sourceParser: Exclude<StyleParser, OpenLayersParser>,
+  targetFile: string, targetParser: Exclude<StyleParser, ArcGISParser | MapfileParser> | undefined,
   oraIndicator: Ora
 ) {
   const inputFileData = await promises.readFile(sourceFile, 'utf-8');
   const indicator = oraIndicator; // for linter.
+
+  if (sourceParser instanceof OpenLayersParser) {
+    throw new Error('OpenLayers is not supported as source.');
+  }
+
+  if (targetParser instanceof ArcGISParser || targetParser instanceof MapfileParser) {
+    throw new Error('ArcGIS (lyrx) and MapFile are not supported as target.');
+  }
 
   try {
     indicator.text = `Reading from ${sourceFile}`;
